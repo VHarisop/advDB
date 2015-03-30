@@ -1,0 +1,14 @@
+# Compiled bytecode
+*.pyc
+*.pyw
+
+# Swap files 
+*.swp
+
+# Pycache folder
+__pycache__/*
+
+# Logs, databases, etc.
+*.log
+*.sql
+*.sqlite
