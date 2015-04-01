@@ -47,12 +47,6 @@ class Server_Base(object):
         print("{0} seconds passed, update timeout".format(L))
 
         # TODO: rest of handler!
-        #       - handle bids
-        #       - discard items
-
-        # get item that is currently processed
-        # server.current_item is just an id that 
-        # points to server.items dict
 
         # retrieve item if it exists
         try:
@@ -87,7 +81,7 @@ class Server_Base(object):
                                               winner=curr_item['holder'])
                 )
 
-                # TODO: send this message to all the clients
+                # send the stop message to every client
                 self.pending.append(messages.StopBidMsg(
                                         item_id = self.curr_item_id,
                                         winner = curr_item['holder'])
@@ -222,7 +216,7 @@ class Server_Base(object):
 
         for msg_dec in msg_list:
 
-            # NOTE: Case 1 -> CONNECT
+            # Case 1 -> CONNECT
 
             if msg_dec['header'] == 'connect':
                 # if username already present, we must reject.
@@ -244,7 +238,7 @@ class Server_Base(object):
 
                 response.append(messages.AckConnectMsg()) 
 
-            # NOTE: Case 2 -> BID
+            # Case 2 -> BID
 
             if msg_dec['header'] == 'bid':
 
@@ -294,7 +288,7 @@ class Server_Base(object):
                                     error = errors.invalid_item_id)
                     )
 
-            # NOTE: Case 3 -> SYNCPRICE
+            # Case 3 -> SYNCPRICE
 
             if msg_dec['header'] == 'sync_price':
 
@@ -333,7 +327,7 @@ class Server_Base(object):
                                         username = username)
                     )
 
-            # NOTE: Case 4 -> STOPBID
+            # Case 4 -> STOPBID
 
             if msg_dec['header'] == 'stop_bid':
 
@@ -351,10 +345,15 @@ class Server_Base(object):
                     # as the other guy got triggered by alarm
                     del self.items[msg_dec['item_id']]
 
-            # TODO: handle bid status
-            # TODO: handle each message accordingly
+            
+            ''' List of future additions:
+
+                - handling of messages that add new items to the auction
+                - i_am_interested message (redundant, can use bid instead)
+                - server mainloop (bootstrap() + serve())
+                - timer messages?
+            '''
         
         # return list of messages for response
         return response
-
 
