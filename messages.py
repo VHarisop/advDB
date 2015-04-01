@@ -18,7 +18,7 @@ class Message(object):
         return self.msg_type
 
     def __repr__(self):
-        return 'msg: {0}'.format(self.msg_data)[:-1]
+        return self.msg_type
 
     def send(self):
 
@@ -34,7 +34,6 @@ class Message(object):
         '''
         return json.loads(self.msg_data)
 
-
 class ConnectMsg(Message):
     
     ''' ConnectMsg is the message that initializes a connection
@@ -45,32 +44,14 @@ class ConnectMsg(Message):
     def __init__(self, **user_data):
         super().__init__(msg_type='connect', msg_details=user_data)
 
-class NewItemMsg(Message):
+class AckConnectMsg(Message):
 
-    ''' NewItemMsg is almost identical to StartBidMsg, as it contains
-        the item's initial price along with a text description (in ASCII).
-        All data are encoded in JSON. 
-
-        Bidders that are interested in the item should send an
-        <i_am_interested> control message (InterestMsg) within 
-        L time units. 
-        If no responses of type <i_am_interested> are received within
-        these L time units, the item is discarded and bidding resumes
-        with the next item (or finishes).
+    ''' Simply acknowledges a connection from a client
+        to enforce a handshake-like protocol.
     '''
 
-    def __init__(self, **bid_data):
-        super().__init__(msg_type='new_item', msg_details=bid_data)
-
-class InterestedMsg(Message):
-
-    ''' Msg of interest about an item. 
-        It contains the item's initial bid from the user that sent it,
-        as well as user data.
-    '''
-
-    def __init__(self, **bid_data):
-        super().__init__(msg_type='interested', msg_details=bid_data)
+    def __init__(self):
+        super().__init__(msg_type='ack', msg_details={})
 
 class StartBidMsg(Message):
 
@@ -81,7 +62,6 @@ class StartBidMsg(Message):
 
     def __init__(self, **bid_data):
         super().__init__(msg_type='start_bid', msg_details=bid_data)
-
 
 class StopBidMsg(Message):
 
@@ -108,7 +88,6 @@ class NewHighBidMsg(Message):
     def __init__(self, **bid_data):
         super().__init__(msg_type='new_high_bid', msg_details=bid_data)
 
-
 class ErrorMsg(Message):
 
     ''' A standard error msg. Error types are defined at errors.py.
@@ -125,7 +104,6 @@ class ErrorMsg(Message):
     def __init__(self, **error_data):
         super().__init__(msg_type='error', msg_details=error_data)
 
-
 class BidMsg(Message):
     
     ''' BidMsg is the message that is sent from the bidders
@@ -136,18 +114,6 @@ class BidMsg(Message):
 
     def __init__(self, **bid_data):
         super().__init__(msg_type='bid', msg_details=bid_data)
-
-
-class RequestSyncMsg(Message):
-
-    ''' RequestSync is a message sent by an auctioneer who 
-        requests a timestamp for a pending transaction (a bid).
-
-        Route: Auctioneer -> Timer
-    '''
-    
-    def __init__(self):
-        super().__init__(msg_type='request_sync', msg_details={})
 
 
 class SyncPriceMsg(Message):
@@ -169,18 +135,6 @@ class SyncPriceMsg(Message):
         except AttributeError:
             return False
 
-
-class SyncMsg(Message):
-
-    ''' SyncMsg is a synchronization message sent to an auctioneer
-        in response to a RequestSync message.
-        Contains a (logical) timestamp in JSON format.
-
-        Route: Timer -> Auctioneer 
-    '''
-
-    def __init__(self, **time_data):
-        super().__init__(msg_type='sync', msg_details=time_data)
 
 class CompleteMsg(Message):
 
