@@ -1,4 +1,6 @@
 # advDB
+-------
+
 An implementation of a simple auction system written in Python TCP sockets.
 Under construction.
 
@@ -55,7 +57,40 @@ Decoding is implemented in 2 stages (in `serialized.py`):
   on the `|` delimiter and using the `json.loads()` method on each of the
   resulting messages to obtain a `dict`-based representation.
 
+## Items
+Each item is stored as a dictionary structure, in a list that each server
+maintains. Servers are expected to be consistent in terms of item queues, i.e. 
+at each point of communication with any client the servers will be maintaining
+the same list of items. 
 
+Each item is denoted by a unique `item_id` which is used for indexing the
+server's item list. The item structure itself is simple enough not to be
+implemented in a separate class. Its fields are:
+- `about`: a small description for the item - text in ASCII
+- `price`: the highest price bid by the item so far - integer
+- `holder`: the username of the highest bidder - text in ASCII
+- `timeouts`: number of consecutive times the item had no bids - integer
 
+A typical item structure follows:
 
+```
+{
+	'about': 'A small pirate hat',
+	'price':  100,
+	'holder': 'johndoe',
+	'timeouts': 0
+}
+```
+All items are created with the initial price of 0, with 0 timeouts and with the
+`holder` field set to None. In
+[`base.py`](https://github.com/VHarisop/advDB/blob/master/base.py), the
+`item_new(about, price)` function is defined, which is handy for creating new
+items with their timeout and holder fields initialized properly. 
+
+The server assigns items ids sequentially, i.e. a new item in the queue
+received the next highest integer higher than the maximum current item id. This
+is to work-around the issue of randomized next item selection, which would
+impose extra overhead on the servers' synchronization. The item selection would
+then have to be implemented either by communication with an extra server or
+process, or by synchronization messages similarly to a voting protocol.
 
