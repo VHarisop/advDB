@@ -20,6 +20,10 @@ class Message(object):
     def __repr__(self):
         return self.msg_type
 
+    def __eq__(self, other):
+        
+        return self.msg_data == other.msg_data
+
     def send(self):
 
         ''' Serializes JSON encoded data using UTF-8 encoding
@@ -52,6 +56,16 @@ class AckConnectMsg(Message):
 
     def __init__(self):
         super().__init__(msg_type='ack', msg_details={})
+
+class ItemsMsg(Message):
+    
+    ''' presents a list of the items to be auctioned to 
+        a participant / bidder.
+    '''
+
+    def __init__(self, **items_data):
+        super().__init__(msg_type='items', msg_details=items_data)
+
 
 class StartBidMsg(Message):
 
