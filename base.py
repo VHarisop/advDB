@@ -70,7 +70,15 @@ class Server_Base(object):
 
             # discard item, inform debug log
             del self.items[self.curr_item_id]
-            log('Deleted item {0}'.format(self.curr_item_id))
+            log('Deleted item {0}'.format(self.curr_item_id)) 
+            
+            # send a StopBidMsg to the other server
+            # to notify about the discarding
+            self.sync(messages.StopBidMsg(item_id=self.curr_item_id,
+                                          winner=curr_item['holder'])
+            )
+
+
             
             # item_id is updated (linear assignment of ids)
             self.curr_item_id += 1
@@ -81,6 +89,7 @@ class Server_Base(object):
                 try:
                     del self.items[self.curr_item_id]
                     log('Deleted item {0}'.format(curr_item))
+                    
                     # TODO: send this message to all the clients
                     self.pending.append(messages.StopBidMsg(
                                         item_id = self.curr_item_id,
@@ -88,8 +97,7 @@ class Server_Base(object):
                     )
                 except KeyError:
                     log('No item found with id {0}'.format(
-                                        self.curr_item_id
-                                        )
+                                        self.curr_item_id)
                     )
                 
                 # send a StopBidMsg to the other server
@@ -360,6 +368,7 @@ class Server_Base(object):
                     # if in my items, I must delete it
                     # as the other guy got triggered by alarm
                     del self.items[msg_dec['item_id']]
+                    log('Deleted item %d' % msg_dec['item_id'])
 
             # TODO: handle bid status
             # TODO: handle each message accordingly
