@@ -26,16 +26,6 @@ def log(string_arg):
         # should not attempt to write again
         dirty_log = True
 
-def max_bid(message_list):
-
-    ''' returns max priced bit out of 
-        a list of bid-type messages
-    '''
-
-    return max(message_list,
-               key = lambda mesg: mesg.msg['price'])
-
-
 def item_new(about, price):
 
     ''' helper function for handy item representation '''
@@ -106,27 +96,30 @@ class Server_Base(object):
                     # TODO: send this message to all the clients
                     self.pending.append(messages.StopBidMsg(
                                         item_id = self.curr_item_id,
-                                        winner = curr_item['holder'])
-                    )
+                                        winner = curr_item['holder']))
+
                 except KeyError:
                     log('No item found with id {0}'.format(
-                                        self.curr_item_id)
-                    )
+                                        self.curr_item_id))
                 
                 # send a StopBidMsg to the other server
                 self.sync(messages.StopBidMsg(item_id=self.curr_item_id,
                                               winner=curr_item['holder'])
                 )
 
-                
-                
                 # update current item id
                 self.curr_item_id += 1
 
             else:
                 # lower price by 10% and update timeout info
-                curr_item['price'] *= 0.9 
-                curr_item['timeouts'] += 1
+                self.items[self.curr_item_id]['price'] *= 0.9 
+                self.items[self.curr_item_id]['timeouts'] += 1
+
+                # send this message to inform every client
+                self.pending.append(messages.SyncPriceMsg(
+                                        item_id=self.curr_item_id,
+                                        username=curr_item['holder'],
+                                        price=(curr_item['price'] * 0.9)))
 
         # renew alarm
         signal.alarm(L)
