@@ -11,10 +11,20 @@ import messages, errors
 L = 2
 M = 2
 
+# set to True if a RuntimeError was raised
+dirty_log = False
+
 # use log() to write logging
 # messages to standard error
 def log(string_arg): 
-    sys.stderr.write(string_arg + '\n')
+    try:
+
+        sys.stderr.write(string_arg + '\n')
+
+    except RuntimeError: # reentrant call?
+        
+        # should not attempt to write again
+        dirty_log = True
 
 def max_bid(message_list):
 
@@ -124,7 +134,11 @@ class Server_Base(object):
             keyboard interrupt events
         '''
 
+        # disable alarms to prevent reentrant calls
+        signal.alarm(0)
+
         log('Closing socket...')
+
         self.server.close()
         sys.exit(1)
 
@@ -229,7 +243,7 @@ class Server_Base(object):
         # into separate messages. Remove trailing emptiness
         msg_list = [serial.decode_msg(i) for i in data.strip('|').split('|')]
 
-        print('{0}: {1}'.format(self.port, msg_list))
+        log('{0}: {1}'.format(self.port, msg_list))
 
         # advance buffer!
         data = data[sum(len(i) + 1 for i in msg_list):] 
@@ -283,7 +297,7 @@ class Server_Base(object):
                         self.items[item_id]['holder'] = username
 
                         # debug log
-                        print('New holder: {0}'.format(username))
+                        log('New holder: {0}'.format(username))
 
                         # renew timeout value
                         signal.alarm(L)
@@ -334,7 +348,7 @@ class Server_Base(object):
                     )
                     
                     # debug log
-                    print('Holder: {0}'.format(self.items[item_id]['holder']))
+                    log('Holder: {0}'.format(self.items[item_id]['holder']))
 
                     # renew timeout for item
                     signal.alarm(L)
