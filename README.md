@@ -81,6 +81,7 @@ A typical item structure follows:
 	'timeouts': 0
 }
 ```
+
 All items are created with the initial price of 0, with 0 timeouts and with the
 `holder` field set to None. In
 [`base.py`](https://github.com/VHarisop/advDB/blob/master/base.py), the
@@ -93,4 +94,59 @@ is to work-around the issue of randomized next item selection, which would
 impose extra overhead on the servers' synchronization. The item selection would
 then have to be implemented either by communication with an extra server or
 process, or by synchronization messages similarly to a voting protocol.
+
+## Synchronization
+Each server has its own private copies of variables (items, prices, etc.). Each
+server also keeps track of time separately with its own internal clock. Time
+handling and ticking is done using the `signal.alarm()` interface, by which the
+timer is set to cause an interrupt after `L` seconds. `L` is the specified
+timeout for price reduction / item discarding.
+
+### Time/Price sync
+While it may seem that such a scheme cannot enforce synchronized data, a
+gossip-like scheme is available: upon an item's price update, the auctioneer
+sends a `SyncPriceMsg` to the other server to inform it about the new bid. A
+successful update (i.e. correct bid price) also causes `alarm()` to reset for
+`L` seconds. If both the sending and the receiving server call the `alarm()`
+function within milliseconds, we can achieve such accuracy in our
+synchronization scheme. This requirement is feasible for 2 servers operating on
+the same physical machine. 
+
+A typical `SyncPriceMsg` is shown in JSON format:
+
+```
+{
+    'header'   : 'sync_price',
+    'item_id'  : 151,
+    'username' : 'johndoe',
+    'price'    : 1200
+}
+```
+
+A server receiving this message is informed that (at least based on the other
+auctioneer's private data) item no. `151` is currently pitched at a price of
+`1200` and is held by user `johndoe`. 
+Each server keeps its own registration table. 
+
+### Item discarding / awarding
+Based on the above synchronization scheme, we can assume that our servers are
+millisecond-consistent. As a result, when an item exceeds its timeout limit, a
+`StopBidMsg` can be sent to the other server to enforce removal from the
+auction queue. 
+
+The server that sends the message first (possibly while being inside the
+interrupt routine after an `alarm()` has been fired) deletes the item and adds
+another `stop_bid`-type message to the pending queue. This is delivered to its
+clients to inform about the end of bidding for this item. 
+
+The server that receives the message has either done this action already
+(removal + client sync) based on its own timer, in which case it can ignore the
+message. Otherwise it must also delete the item and add a `stop_bid` message to
+its own pending queue to enforce client synchronization.
+
+### Auctioneer message parsing
+The details of the message parsing can be found inside the `parse_messages()`
+method (in `base.py` which implements most of the auction server). The
+`sigalrm_handler()` is also essential to synchronization. Appropriate actions
+are defined for each case and each message type expected to be received. 
 
