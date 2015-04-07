@@ -88,7 +88,10 @@ class Server_Base(object):
                                           winner=curr_item['holder'])
             )
 
-
+            # also notify my clients
+            self.pending.append(messages.StopBidMsg(
+                                    item_id=self.curr_item_id,
+                                    winner=curr_item['holder']))
             
             # item_id is updated (linear assignment of ids)
             self.curr_item_id += 1
@@ -296,6 +299,10 @@ class Server_Base(object):
                         self.items[item_id]['price'] = offer
                         self.items[item_id]['holder'] = username
 
+                        # reset timeouts!
+                        self.items[item_id]['timeouts'] = 0
+                        log('Reset timeout')
+
                         # debug log
                         log('New holder: {0}'.format(username))
 
@@ -340,6 +347,9 @@ class Server_Base(object):
                     self.items[item_id]['price'] = price
                     self.items[item_id]['holder'] = username
 
+                    # update timeouts
+                    self.items[item_id]['timeouts'] = 0
+
                     # add to pending messages to inform clients
                     self.pending.append(messages.NewHighBidMsg(
                                         item_id = item_id,
@@ -373,12 +383,12 @@ class Server_Base(object):
                                     item_id = msg_dec['item_id'],
                                     winner = msg_dec['winner']
                 )
-
-                # only add if message is not already there
-                # from sigalrm trigger
-                self.pending.append(stopmsg)
                 
                 if msg_dec['item_id'] in self.items:
+                    
+                    # only add if message is not already there
+                    # from sigalrm trigger
+                    self.pending.append(stopmsg)
                     # if in my items, I must delete it
                     # as the other guy got triggered by alarm
                     del self.items[msg_dec['item_id']]

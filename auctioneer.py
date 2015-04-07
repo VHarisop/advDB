@@ -156,11 +156,7 @@ class Auctioneer(Server_Base):
                     write_conns.append(connection)
 
                 else:                    
-                    # TODO: handle:
-                    #       1 - message fragmentation
-                    #       2 - possible message concatenation
-                    # messages are less than 1024 bts long
-                    # also unpacking is needed for the bytes
+                    # unpacking is needed for the bytes
                     data = serial.unpack_msg(elem.recv(BUFF_SIZE))
                     print(self.port, data)
                     # readable sockets always have data
@@ -172,7 +168,6 @@ class Auctioneer(Server_Base):
                         read_conns.remove(elem)
                         write_conns.remove(elem)
 
-            # TODO: INCOMPLETE!!!
             for elem in wx: 
        
                 # if connection is in the response_list, send all
