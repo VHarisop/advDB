@@ -150,3 +150,54 @@ method (in `base.py` which implements most of the auction server). The
 `sigalrm_handler()` is also essential to synchronization. Appropriate actions
 are defined for each case and each message type expected to be received. 
 
+## The Bidder Client
+The bidder client uses a socket to connect to a specified auction server the
+address of which defaults to `localhost:50000` but can be passed explicitly as
+an argument to its constructor. 
+
+In short:
+```
+from bidder import Bidder
+bidr = Bidder('yourname', your_id, 'localhost:50000')
+bidr.run()
+bidr.complete()
+```
+
+### Initializing a client
+Each bidder client is associated with a username as well as a user id. To
+create a bidder with username 'johndoe' and id 1 which connects to localhost at
+port 4040, just do:
+
+```
+from bidder import Bidder
+bidr = Bidder('johndoe', 1, 'localhost:4040')
+```
+
+Most of the work is done in the `__init__` method of the Bidder, which sends a
+`ConnectMsg` to the auction server. This message initiates a connection
+handshake which results either in acknowledgement or rejection. Acknowledgement
+is indicated by an `ACK` message, while rejection is usually the result of
+erroneous registration attempts (e.g. using a username that is already used by
+someone else). 
+
+
+### The `run()` method
+The `run()` method should be called immediately after a bidder is initialized,
+as it implements the main loop of the client. It accepts a single parameter,
+`instream`, which defaults to standard input.
+
+If input would be handled by another source, e.g. a GUI class, `instream` could
+be a socket of `socket.AF_UNIX` type. The GUI should run in a separate thread
+and write its input to the ipc socket, which would then be polled by
+`select()`. 
+
+### Items & status variable
+Each bidder client uses a status variable and a dictionary of items. 
+
+The status variable contains info for the current item id, the minimum allowed bid and the ability of the bidder to make an offer. 
+The item dictionary contains info about all items currently in the auction
+queue, namely their info, descriptions, current price, etc. It is populated
+after the `ack` message has been received from the server, via a separate
+message of `items` type. 
+
+
