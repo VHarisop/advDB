@@ -148,8 +148,9 @@ class Bidder(object):
         data = data[sum(len(i) + 1 for i in msg_list):]
 
         for msg in msg_list:
-            
-            # TODO: handle all cases
+
+            # TODO: define a meaningful return value 
+            #       for the client's parse_messages() method
 
             if msg['header'] == 'items':
                 # iterate over all keys
@@ -165,24 +166,23 @@ class Bidder(object):
                     log('Can participate!')
 
                 else:
+                    log("Can't participate yet")
 
-                    log('Cant participate')
-
+                # print the items (NOTE:only useful in CLI-application)
                 print(self.items)
 
             if msg['header'] == 'sync_price':
-                # update item info
                 self.update_price(msg['price'], msg['username'])
                 log('New price: %d' % msg['price'])
 
             if msg['header'] == 'new_high_bid':
-                # update item info
                 self.update_price(msg['price'], msg['bidder'])
                 log('New price: %d' % msg['price'])
 
             if msg['header'] == 'stop_bid':
 
                 # mark myself as participant 
+                # as the previous item was sold/discarded
                 self.status['bidding'] = True
 
                 try:
@@ -212,15 +212,31 @@ class Bidder(object):
                 log('acknowledged from server')
 
             if msg['header'] == 'error':
-                log('error')
 
-        print(self.status)
+                if msg['error'] == errors.invalid_item_id:
+                    log('error: id {0} is not valid'.format(msg['item_id']))
+                
+                if msg['error'] == errors.reject_register:
+                    log('error: username {0} is already used'.format(
+                                                        msg['username']))
+                    exit(1) # NOTE: fatal error!
+
+                if msg['error'] == errors.low_price_bid:
+                    log('error: bid price was too low')
+
+                if msg['error'] == errors.max_connections:
+                    log('error: maximum No. of connections reached')
+
+                    exit(1) # NOTE: fatal error!
+
+
+        # print(self.status)
         return response
 
-    def run(self):
+    def run(self, instream=sys.stdin):
 
         flag = True
-        rdr_list = [self.sock, sys.stdin]
+        rdr_list = [self.sock, instream]
         wrr_list = [self.sock]
 
         while flag:
@@ -248,15 +264,17 @@ class Bidder(object):
 
                 elif conn == sys.stdin:
 
-                    # TODO: handle user input!
-                    # pass
-                    # flag = False
+                    # NOTE: highly dependent case!
+                    
                     data = sys.stdin.readline().strip().split()
                     self.parse_client(data)
 
 
 def parse_address(address_string):
-    
+
+    ''' parses an ip address given as a command line option
+        in the form [address:port] '''
+
     s = address_string.split(':')
     return (s[0], int(s[1]))
 
