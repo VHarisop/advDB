@@ -37,8 +37,7 @@ class Bidder(object):
         # + index of current item in auction
         # NOTE: these are received after a successful connect + ack handshake
         self.items = {}
-        self.current_item = None
-
+        
         # can i participate in the auction?
         # this flag is updated after receiving the Items msg.
 
@@ -68,8 +67,8 @@ class Bidder(object):
         ''' Update the price of an item after a 
             new_high_bid message. '''
 
-        self.items[self.current_item]['price'] = price
-        self.items[self.current_item]['holder'] = bidder
+        self.items[self.status['item_id']]['price'] = price
+        self.items[self.status['item_id']]['holder'] = bidder
 
         # also update my status variable
         self.status['min_price'] = price
@@ -87,7 +86,7 @@ class Bidder(object):
                 
                 # insist on sending the message to the auction server
                 self.sock.sendall(messages.BidMsg(
-                                    item_id=self.current_item,
+                                    item_id=self.status['item_id'],
                                     price=bid_price,
                                     username=self.username).send())
 
@@ -126,7 +125,7 @@ class Bidder(object):
 
                     if self.sock in rx:
                         self.sock.sendall(messages.BidMsg(
-                                            item_id=self.current_item,
+                                            item_id=self.status['item_id'],
                                             price=price,
                                             username=self.username).send())
 
@@ -158,11 +157,9 @@ class Bidder(object):
                     self.items[int(key)] = msg['items'][key]
                 
                 # update current item info
-                self.current_item = msg['current']
-                # also update status variable
-                self.status['item_id'] = self.current_item
+                self.status['item_id'] = msg['current']
             
-                if self.items[self.current_item]['holder'] == None:    
+                if self.items[self.status['item_id']]['holder'] == None:    
                     # mark me as participant
                     self.status['bidding'] = True
                     log('Can participate!')
@@ -195,17 +192,16 @@ class Bidder(object):
                     # NOTE: 2 approaches here:
                     #       a. autoincrement current item OR
                     #       b. wait for an auctioneer message with
-                    #       c. the new item
+                    #          the new item
                     
-                    self.current_item += 1 
 
                     # update status variable
-                    self.status['item_id'] = self.current_item
+                    self.status['item_id'] += 1
                     # minimum price is reset
                     self.status['min_price'] = 0
 
                     log('New item: {0}'.format(
-                                self.items[self.current_item]))
+                                self.items[self.status['item_id']]))
                     
                 except KeyError:
                     # item was already deleted (erroneous, but can be handled)
