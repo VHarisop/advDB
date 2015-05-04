@@ -160,7 +160,8 @@ class Server_Base(object):
         self.items = {
             1: item_new('Small hat from middle ages', 0),
             2: item_new('Pirate Sword', 0),
-            3: item_new('Cupboard from victorian age', 0)
+            3: item_new('Cupboard from victorian age', 0),
+            4: item_new('A flyer from 1880s Chicago', 0)
         }
 
         self.item_ticker = max(self.items.keys())
