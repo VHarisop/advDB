@@ -62,7 +62,17 @@ class Server_Base(object):
         try:
             curr_item = self.items[self.curr_item_id]
         except KeyError:
-            signal.alarm(L)
+
+            if not self.items:
+
+                # notify my auctioneers to finish auction
+                # reset alarms, do not renew
+                self.pending.append(messages.CompleteMsg())
+                signal.alarm(0)
+
+            else:
+                signal.alarm(L)
+            
             return
 
         if curr_item['price'] == 0:
@@ -268,6 +278,12 @@ class Server_Base(object):
                 )
 
                 response.append(messages.AckConnectMsg())
+
+                # if no items left, auction is complete 
+                if not self.items: 
+                    response.append(messages.CompleteMsg())
+                    return response
+
                 response.append(messages.ItemsMsg(items=self.items, 
                                                   current=self.curr_item_id))
 
@@ -387,9 +403,21 @@ class Server_Base(object):
                     # as the other guy got triggered by alarm
                     del self.items[msg_dec['item_id']]
                     log('Deleted item %d' % msg_dec['item_id'])
+            
+            if msg_dec['header'] == 'quit':
 
-            # TODO: handle bid status
-            # TODO: handle each message accordingly
+                # retrieve disconnected client's identity
+                # and remove from registrar table
+
+                if msg_dec['username'] in self.registrar_table:
+                    del self.registrar_table[msg_dec['username']]
+                    log('Removed user %s' % msg_dec['username'])
+
+                # NOTE: connections that close abruptly
+                #       do not send this message. They are handled
+                #       in the serve() loop instead.
+                #       No need to remove from select.select's lists,
+                #       as it is handled there too.
         
         # return list of messages for response
         return response

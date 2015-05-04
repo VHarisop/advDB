@@ -150,6 +150,14 @@ class SyncPriceMsg(Message):
             return False
 
 
+class QuitMsg(Message):
+
+    ''' QuitMsg is sent from a bidder to the auctioneer when 
+        he/she intends on leaving the auction. '''
+
+    def __init__(self, **usr_data):
+        super().__init__(msg_type = 'quit', msg_details=usr_data)
+
 class CompleteMsg(Message):
 
     ''' CompleteMsg is sent once the auction is complete and all items

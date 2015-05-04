@@ -4,7 +4,9 @@
 import time, json, socket, signal, select
 from socket import error as SocketError
 import sys
-import messages
+
+# import my modules
+import messages, errors
 from serializer import unpack_msg, decode_msg
 
 def log(msg):
@@ -93,12 +95,6 @@ class Bidder(object):
                 # exit the "insist" loop
                 break
 
-    def complete(self):
-        
-        ''' Sends a CompleteMsg to finish session with server '''
-
-        self.sock.sendall(messages.CompleteMsg().send())
-
     def parse_client(self, data):
 
         # NOTE: this function is a general-purpose function
@@ -131,9 +127,12 @@ class Bidder(object):
 
                         break
 
-        elif data[0].lower() == 'exit':
+        elif data[0].lower() == 'quit':
 
-            # exit bidder application
+            # send a 'quit' message to the server to finish session
+            self.sock.sendall(messages.QuitMsg(username=self.username).send())
+
+            # close socket and exit application 
             self.sock.close()
             exit(1)
 
@@ -169,7 +168,10 @@ class Bidder(object):
                     log("Can't participate yet")
 
                 # print the items (NOTE:only useful in CLI-application)
-                print(self.items)
+                for it in self.items.values():
+                    print('Item: {0} - Price: {1}'.format(
+                           it['about'],
+                           it['price']))
 
             if msg['header'] == 'sync_price':
                 self.update_price(msg['price'], msg['username'])
@@ -210,6 +212,14 @@ class Bidder(object):
                 
             if msg['header'] == 'ack':
                 log('acknowledged from server')
+
+            if msg['header'] == 'complete':
+                log('Auction has finished, will now terminate...')
+
+                # send quit message before exiting and closing socket 
+                self.sock.sendall(messages.QuitMsg(username=self.username).send())
+                self.sock.close()
+                exit(0)
 
             if msg['header'] == 'error':
 
@@ -302,7 +312,6 @@ if __name__ == '__main__':
         try:
             bidr = Bidder(sys.argv[1], int(sys.argv[2]), server_address)
             bidr.run()
-            bidr.complete()
         finally:
             pass
     else:
