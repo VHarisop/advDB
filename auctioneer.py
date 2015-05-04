@@ -45,6 +45,18 @@ class Auctioneer(Server_Base):
         sync server).
 
     '''
+
+    def lookup_registrar(self, conn):
+
+        ''' lookup a specific connection in the registrar table 
+            and return its corresponding username '''
+
+        for (k, v) in self.registrar_table.items():
+            if conn == v[0]: return k
+
+        # if none found, return None (should be unreachable)
+        return None
+
     def handle_responses(self, response_list, elem):
 
         ''' this function sends all the messages in 
@@ -165,8 +177,16 @@ class Auctioneer(Server_Base):
                         response_list[elem] = self.parse_messages(data, elem)
                     else:
                         print('closing{0}\n'.format(elem))
+
+                        # delete entry from registrar table, if found
+                        usrname = self.lookup_registrar(elem)
+                        if usrname:
+                            del self.registrar_table[usrname]
+
+
                         read_conns.remove(elem)
                         write_conns.remove(elem)
+                        self.registrar_table
 
             for elem in wx: 
        
