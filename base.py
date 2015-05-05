@@ -183,7 +183,8 @@ class Server_Base(object):
     def __init__(self, host='localhost', 
                        port=50000, 
                        max_connections=27,
-                       other_port = 50005):
+                       other_port = 50005,  
+                       itemfile="items.txt"):
 
         # register signal handlers 
         signal.signal(signal.SIGALRM, self.sigalrm_handler)

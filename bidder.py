@@ -34,7 +34,8 @@ class Bidder(object):
             'item_id': None,        # which item is now?
             'min_price': 0,         # minimum offer?
             'acknowledged': False,  # have i been acknowledged?
-            'holder': None          # who holds the item?
+            'holder': None,         # who holds the item?
+            'description': ''
         }
 
         # list of items to be auctioned
@@ -146,6 +147,19 @@ class Bidder(object):
             self.sock.close()
             exit(1)
 
+        elif data[0].lower() == 'list_bid':
+
+            print('Highest bid: %d from %s' % (self.status['min_price'],
+                                               self.status['holder']))
+
+        elif data[0].lower() == 'list_description':
+            
+            print('Item: %s' % self.status['description'])
+
+        else:
+
+            log('Cannot handle command %s' % data[0])
+
     def parse_messages(self, data, connection):
 
         ''' Parses received data from auction servers '''
@@ -185,6 +199,7 @@ class Bidder(object):
                 # update status variable
                 self.status['item_id'] = msg['item_id']
                 self.status['min_price'] = msg['price']
+                self.status['description'] = msg['description']
 
                 log('New item: {0} - {1}'.format(
                         msg['description'],
