@@ -81,15 +81,6 @@ class AckInterestMsg(Message):
     def __init__(self):
         super().__init__(msg_type='ack_interest', msg_details={})
 
-class ItemsMsg(Message):
-    
-    ''' presents a list of the items to be auctioned to 
-        a participant / bidder.
-    '''
-
-    def __init__(self, **items_data):
-        super().__init__(msg_type='items', msg_details=items_data)
-
 
 class StartBidMsg(Message):
 
