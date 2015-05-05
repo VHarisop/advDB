@@ -38,6 +38,15 @@ class Message(object):
         '''
         return json.loads(self.msg_data)
 
+class StartAuctionMsg(Message):
+
+    ''' sent from one auctioneer to the other 
+        when one of them has started auctioning '''
+
+    def __init__(self):
+        super().__init__(msg_type='start_auction', msg_details={})
+        
+
 class ConnectMsg(Message):
     
     ''' ConnectMsg is the message that initializes a connection
@@ -56,6 +65,21 @@ class AckConnectMsg(Message):
 
     def __init__(self):
         super().__init__(msg_type='ack', msg_details={})
+
+class InterestedMsg(Message):
+    ''' InterestedMsg is sent by a bidder to the auctioneer 
+        to ask permission for bidding on an item '''
+
+    def __init__(self, **usr_data):
+        super().__init__(msg_type='i_am_interested', msg_details=usr_data)
+        
+
+class AckInterestMsg(Message):
+
+    ''' Acknowledges interest from a bidder '''
+
+    def __init__(self):
+        super().__init__(msg_type='ack_interest', msg_details={})
 
 class ItemsMsg(Message):
     
@@ -148,6 +172,14 @@ class SyncPriceMsg(Message):
             return self.msg['item_id'] == other.msg['item_id'] and self.msg['price'] > other.msg['price']
         except AttributeError:
             return False
+
+class SyncInterestMsg(Message):
+    
+    ''' sent between auctioneers to update interest info
+        for items '''
+
+    def __init__(self, **usr_data):
+        super().__init__(msg_type='sync_interest', msg_details=usr_data)
 
 
 class QuitMsg(Message):

@@ -33,12 +33,13 @@ class Bidder(object):
             'bidding': False,       # can i bid?
             'item_id': None,        # which item is now?
             'min_price': 0,         # minimum offer?
+            'acknowledged': False,  # have i been acknowledged?
+            'holder': None          # who holds the item?
         }
 
         # list of items to be auctioned
         # + index of current item in auction
         # NOTE: these are received after a successful connect + ack handshake
-        self.items = {}
         
         # can i participate in the auction?
         # this flag is updated after receiving the Items msg.
@@ -69,11 +70,9 @@ class Bidder(object):
         ''' Update the price of an item after a 
             new_high_bid message. '''
 
-        self.items[self.status['item_id']]['price'] = price
-        self.items[self.status['item_id']]['holder'] = bidder
-
-        # also update my status variable
         self.status['min_price'] = price
+        self.status['holder'] = bidder
+
 
     def send_bid(self, bid_price):
 
@@ -106,6 +105,11 @@ class Bidder(object):
 
         if data[0].lower() == 'bid':
 
+            # if not acknowledged, client cannot bid
+            if not self.status['acknowledged']:
+                log('You have not been acknowledged for bidding!')
+                return 
+                
             # get bid amount
             price = int(data[1])
 
@@ -126,6 +130,12 @@ class Bidder(object):
                                             username=self.username).send())
 
                         break
+        
+        elif data[0].lower() == 'int':
+
+            # send an InterestedMsg to the server to enable bidding
+            self.sock.sendall(messages.InterestedMsg(
+                                username=self.username).send())
 
         elif data[0].lower() == 'quit':
 
@@ -151,28 +161,6 @@ class Bidder(object):
             # TODO: define a meaningful return value 
             #       for the client's parse_messages() method
 
-            if msg['header'] == 'items':
-                # iterate over all keys
-                for key in msg['items'].keys():
-                    self.items[int(key)] = msg['items'][key]
-                
-                # update current item info
-                self.status['item_id'] = msg['current']
-            
-                if self.items[self.status['item_id']]['holder'] == None:    
-                    # mark me as participant
-                    self.status['bidding'] = True
-                    log('Can participate!')
-
-                else:
-                    log("Can't participate yet")
-
-                # print the items (NOTE:only useful in CLI-application)
-                for it in self.items.values():
-                    print('Item: {0} - Price: {1}'.format(
-                           it['about'],
-                           it['price']))
-
             if msg['header'] == 'sync_price':
                 self.update_price(msg['price'], msg['username'])
                 log('New price: %d' % msg['price'])
@@ -181,35 +169,41 @@ class Bidder(object):
                 self.update_price(msg['price'], msg['bidder'])
                 log('New price: %d' % msg['price'])
 
-            if msg['header'] == 'stop_bid':
+            if msg['header'] == 'ack_interest':
+                self.status['acknowledged'] = True
 
-                # mark myself as participant 
-                # as the previous item was sold/discarded
+                log('Can now bid for item')
+
+            if msg['header'] == 'start_bid':
+                
+                # mark myself as participant, as a new item is introduced
                 self.status['bidding'] = True
 
-                try:
-                    del self.items[msg['item_id']]
-                    log('Deleted item %d won by %s' % (msg['item_id'],
-                                                         msg['winner']))
-                    # NOTE: 2 approaches here:
-                    #       a. autoincrement current item OR
-                    #       b. wait for an auctioneer message with
-                    #          the new item
-                    
+                # need an explicit acknowledgement message
+                self.status['acknowledged'] = False
 
-                    # update status variable
-                    self.status['item_id'] += 1
-                    # minimum price is reset
-                    self.status['min_price'] = 0
+                # update status variable
+                self.status['item_id'] = msg['item_id']
+                self.status['min_price'] = msg['price']
 
-                    log('New item: {0}'.format(
-                                self.items[self.status['item_id']]))
-                    
-                except KeyError:
-                    # item was already deleted (erroneous, but can be handled)
-                    # log('Item %d already deleted' % msg['item_id'])
-                    pass
-                
+                log('New item: {0} - {1}'.format(
+                        msg['description'],
+                        msg['price']))
+
+
+            if msg['header'] == 'stop_bid':
+
+                # disable bidding until next item is presented
+                self.status['bidding'] = False
+                self.status['acknowledged'] = False
+
+                # update log
+                log('Item %d won by %s' % (msg['item_id'], msg['winner']))
+
+                # update holder/price on status variable
+                self.status['holder'] = None
+                self.status['min_price'] = 0
+
             if msg['header'] == 'ack':
                 log('acknowledged from server')
 
@@ -238,6 +232,9 @@ class Bidder(object):
                     log('error: maximum No. of connections reached')
 
                     exit(1) # NOTE: fatal error!
+
+                if msg['error'] == errors.interest_phase:
+                    log('We are not yet in the bidding phase! Please wait')
 
 
         # print(self.status)

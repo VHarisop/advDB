@@ -11,7 +11,7 @@ from base import Server_Base
 import serializer as serial
 import messages, errors
 
-L = 2
+L = 5
 M = 2
 # L is the timeout in seconds for bidding actions
 # M is the number of price lowering timeouts allowed
@@ -126,6 +126,9 @@ class Auctioneer(Server_Base):
         self.registrars = {}
         self.curr_item_id = 1
 
+        # start alarms when it becomes True
+        self.auctioning = False
+
 
     def serve(self):
 
@@ -166,6 +169,22 @@ class Auctioneer(Server_Base):
                     # add incoming connection to read_list
                     read_conns.append(connection)
                     write_conns.append(connection)
+
+                    # if this was first connection, start alarm() sequence
+                    if not self.auctioning:
+                        print('{0} - Started'.format(self.port))
+                        self.auctioning = True
+                        self.sync(messages.StartAuctionMsg())
+                        response_list[connection] = self.start_msg()
+                        signal.alarm(L)
+
+                    # if auctioning but still on interest phase,
+                    # send 'start_bid' msg
+                    else:
+                        
+                        if self.items: 
+                            if self.items[self.curr_item_id]['timeouts'] == 0:
+                                response_list[connection] = self.start_msg()
 
                 else:                    
                     # unpacking is needed for the bytes

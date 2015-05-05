@@ -8,7 +8,7 @@ import serializer as serial
 import messages, errors
 
 # timeout and alarm constants
-L = 2
+L = 5
 M = 2
 
 # set to True if a RuntimeError was raised
@@ -17,6 +17,7 @@ dirty_log = False
 # use log() to write logging
 # messages to standard error
 def log(string_arg): 
+
     try:
 
         sys.stderr.write(string_arg + '\n')
@@ -34,6 +35,7 @@ def item_new(about, price):
         'about': about,
         'price': price,
         'holder': None,
+        'interested': [],
         'timeouts': 0
     }
 
@@ -48,7 +50,7 @@ class Server_Base(object):
         '''
         global L
 
-        log("{0} seconds passed, update timeout".format(L))
+        log("{0} seconds passed, update timeout - {1}".format(L, self.port))
 
         # TODO: rest of handler!
         #       - handle bids
@@ -75,7 +77,7 @@ class Server_Base(object):
             
             return
 
-        if curr_item['price'] == 0:
+        if curr_item['interested'] == []:
             # no price has been offered, nobody interested
 
             # discard item, inform debug log
@@ -92,44 +94,73 @@ class Server_Base(object):
             self.pending.append(messages.StopBidMsg(
                                     item_id=self.curr_item_id,
                                     winner=curr_item['holder']))
-            
+
+            # if no items remain, do not renew alarm
+            # and inform my clients about completion of auction
+            if not self.items:
+                signal.alarm(0)
+                self.pending.append(messages.CompleteMsg())
+                return
+
             # item_id is updated (linear assignment of ids)
-            self.curr_item_id += 1
+            self.curr_item_id = min(self.items)
+
+            # notify my clients for bidding on new item
+            self.pending.append(self.start_msg())
+            self.interest_phase = True
 
         else:
+            
+            # update timeouts
+            self.items[self.curr_item_id]['timeouts'] += 1
+            self.interest_phase = False
+
             # >= 1 offers, price must be lowered or item awarded
+
+            # nobody has initially bid on the item - reduce price!
+            if curr_item['holder'] == None and curr_item['timeouts'] > 1:
+                self.items[self.curr_item_id]['price'] *= 0.9
+ 
+                # send this message to inform every client
+                self.pending.append(messages.SyncPriceMsg(
+                                        item_id=self.curr_item_id,
+                                        username=curr_item['holder'],
+                                        price=(curr_item['price'] * 0.9)))          
+
             if curr_item['timeouts'] > M:        
+
                 try:
                     del self.items[self.curr_item_id]
                     log('Deleted item {0}'.format(curr_item))
                     
-                    # TODO: send this message to all the clients
                     self.pending.append(messages.StopBidMsg(
                                         item_id = self.curr_item_id,
                                         winner = curr_item['holder']))
+
+                except KeyError:
+
+                    log('Item with id %d already deleted' % self.curr_item_id)
+                
+                try:
+
+                    if self.items:
+
+                        # update item counter
+                        self.curr_item_id = min(self.items)
+
+                        # send a start bid message for the next item
+                        self.pending.append(self.start_msg())
+                        self.interest_phase = True
 
                 except KeyError:
                     log('No item found with id {0}'.format(
                                         self.curr_item_id))
                 
                 # send a StopBidMsg to the other server
-                self.sync(messages.StopBidMsg(item_id=self.curr_item_id,
-                                              winner=curr_item['holder'])
-                )
+#                self.sync(messages.StopBidMsg(item_id=self.curr_item_id,
+#                                              winner=curr_item['holder'])
+#                )
 
-                # update current item id
-                self.curr_item_id += 1
-
-            else:
-                # lower price by 10% and update timeout info
-                self.items[self.curr_item_id]['price'] *= 0.9 
-                self.items[self.curr_item_id]['timeouts'] += 1
-
-                # send this message to inform every client
-                self.pending.append(messages.SyncPriceMsg(
-                                        item_id=self.curr_item_id,
-                                        username=curr_item['holder'],
-                                        price=(curr_item['price'] * 0.9)))
 
         # renew alarm
         signal.alarm(L)
@@ -163,9 +194,6 @@ class Server_Base(object):
         self.max_connections    = max_connections
         self.other_port         = other_port
 
-        # internal state of Lamport Clock
-        self.timer              = 0
-
         # sample items. Initial price is always 0, to be initiated by bidder.
         self.items = {
             1: item_new('Small hat from middle ages', 0),
@@ -174,7 +202,7 @@ class Server_Base(object):
             4: item_new('A flyer from 1880s Chicago', 0)
         }
 
-        self.item_ticker = max(self.items.keys())
+        self.interest_phase = False
         # current_item_id is the item that bids 
         # are currently placed on (denoted by id)
         self.curr_item_id = None
@@ -215,6 +243,15 @@ class Server_Base(object):
         self.server.close()
         self.other.close()
 
+    def start_msg(self):
+
+        ''' Creates a StartBidMsg based on the auction's current state '''
+
+        return messages.StartBidMsg(
+                    item_id = self.curr_item_id,
+                    price = self.items[self.curr_item_id]['price'],
+                    description = self.items[self.curr_item_id]['about'])
+
         
     def sync(self, msg):
 
@@ -237,7 +274,7 @@ class Server_Base(object):
                     repeat_flag = False
         
         # debug log
-        log('Sent: {0}'.format(msg))
+        # log('Sent: {0}'.format(msg))
 
     
     def parse_messages(self, data, connection):
@@ -250,7 +287,8 @@ class Server_Base(object):
         # into separate messages. Remove trailing emptiness
         msg_list = [serial.decode_msg(i) for i in data.strip('|').split('|')]
 
-        log('{0}: {1}'.format(self.port, msg_list))
+        # message log
+        # log('{0}: {1}'.format(self.port, msg_list))
 
         # advance buffer!
         data = data[sum(len(i) + 1 for i in msg_list):] 
@@ -284,9 +322,6 @@ class Server_Base(object):
                     response.append(messages.CompleteMsg())
                     return response
 
-                response.append(messages.ItemsMsg(items=self.items, 
-                                                  current=self.curr_item_id))
-
             # NOTE: Case 2 -> BID
 
             if msg_dec['header'] == 'bid':
@@ -296,8 +331,17 @@ class Server_Base(object):
                 offer       = msg_dec['price']
                 username    = msg_dec['username']
 
-
                 if item_id in self.items:
+
+                    if self.interest_phase:
+
+                        # we are still in the interest phase
+                        # and client should wait for next phase
+                        response.append(messages.ErrorMsg(
+                                username=username,
+                                error=errors.interest_phase))
+
+                        continue
 
                     if offer > self.items[item_id]['price']:
 
@@ -368,7 +412,7 @@ class Server_Base(object):
                     )
                     
                     # debug log
-                    log('Holder: {0}'.format(self.items[item_id]['holder']))
+                    log('New holder: {0}'.format(self.items[item_id]['holder']))
 
                     # renew timeout for item
                     signal.alarm(L)
@@ -392,18 +436,72 @@ class Server_Base(object):
                 stopmsg = messages.StopBidMsg(
                                     item_id = msg_dec['item_id'],
                                     winner = msg_dec['winner']
-                )
+                )       
+                
                 
                 if msg_dec['item_id'] in self.items:
                     
                     # only add if message is not already there
                     # from sigalrm trigger
                     self.pending.append(stopmsg)
+
                     # if in my items, I must delete it
                     # as the other guy got triggered by alarm
-                    del self.items[msg_dec['item_id']]
-                    log('Deleted item %d' % msg_dec['item_id'])
-            
+                    try:
+                        del self.items[msg_dec['item_id']]
+                        log('Deleted item %d' % msg_dec['item_id'])
+                    except KeyError:
+                        pass
+
+                    if self.items:  
+                        # if nonempty, update item counter
+                        try:
+                            self.curr_item_id = min(self.items)
+                            self.pending.append(self.start_msg())
+                            self.interest_phase = True
+                        except KeyError:
+                            pass
+
+                if not self.items:
+                    # inform my clients that auction is finished
+                    self.pending.append(messages.CompleteMsg())
+
+            # NOTE: Case 5 -> INTERESTED
+                
+            if msg_dec['header'] == 'i_am_interested':
+
+                if self.items[self.curr_item_id]['timeouts'] == 0:
+
+                    # add user to interested people
+                    self.items[self.curr_item_id]['interested'].append(
+                                        msg_dec['username'])
+
+                    log('User %s is interested for item %d' % 
+                                (msg_dec['username'], self.curr_item_id))
+
+                    # sync with other server
+                    self.sync(messages.SyncInterestMsg(
+                                    username=msg_dec['username']))
+
+                    # respond to bidder with acknowledgement message
+                    response.append(messages.AckInterestMsg())
+
+
+
+            # NOTE: Case 6 -> STARTAUCTION
+
+            if msg_dec['header'] == 'start_auction':
+
+                # start the alarm sequence here
+                self.auctioning = True
+                signal.alarm(L)
+
+            if msg_dec['header'] == 'sync_interest':
+
+                # update interest info for item
+                self.items[self.curr_item_id]['interested'].append(
+                            msg_dec['username'])
+    
             if msg_dec['header'] == 'quit':
 
                 # retrieve disconnected client's identity
