@@ -1,0 +1,6 @@
+5
+4
+10 		A Cowboy Hat from 1800.
+150		Coin used in a british settlement.
+200		Captain Blackbeard's golden tooth.
+190		Captain America's shield replica.
