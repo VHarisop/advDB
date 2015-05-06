@@ -52,7 +52,7 @@ class Auctioneer(Server_Base):
             and return its corresponding username '''
 
         for (k, v) in self.registrar_table.items():
-            if conn == v[0]: return k
+            if conn == v: return k
 
         # if none found, return None (should be unreachable)
         return None

@@ -156,10 +156,6 @@ class Server_Base(object):
                     log('No item found with id {0}'.format(
                                         self.curr_item_id))
                 
-                # send a StopBidMsg to the other server
-#                self.sync(messages.StopBidMsg(item_id=self.curr_item_id,
-#                                              winner=curr_item['holder'])
-#                )
 
 
         # renew alarm
@@ -311,10 +307,7 @@ class Server_Base(object):
                     return [response]
 
                 # otherwise, register normally
-                self.registrar_table[msg_dec['username']] = (
-                            connection, 
-                            msg_dec['uid']
-                )
+                self.registrar_table[msg_dec['username']] = connection
 
                 response.append(messages.AckConnectMsg())
 

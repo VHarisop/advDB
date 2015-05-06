@@ -22,10 +22,9 @@ class Bidder(object):
         connection is established, the bidding logic is implemented.
     '''
 
-    def __init__(self, username, uid, server_address=('localhost', 50000)):
+    def __init__(self, username, server_address=('localhost', 50000)):
 
-        # initialize my identifiers
-        self.uid = uid
+        # initialize my identifier(s)
         self.username = username
 
         # client status structure
@@ -46,7 +45,7 @@ class Bidder(object):
         # this flag is updated after receiving the Items msg.
 
         # NOTE: using the **kwargs notation for initializing messages
-        connmsg = messages.ConnectMsg(uid=uid, username=username)
+        connmsg = messages.ConnectMsg(username=username)
         
         # try to initialize socket
         try:
@@ -170,6 +169,10 @@ class Bidder(object):
         msg_list = [decode_msg(msg) for msg in data.strip('|').split('|')]
         data = data[sum(len(i) + 1 for i in msg_list):]
 
+        # log
+        # print('DATA: ', msg_list)
+
+
         for msg in msg_list:
 
             # TODO: define a meaningful return value 
@@ -257,10 +260,29 @@ class Bidder(object):
 
     def run(self, instream=sys.stdin):
 
-        flag = True
-        rdr_list = [self.sock, instream]
-        wrr_list = [self.sock]
+        import os
 
+        # remove previous instances of socket
+        try:
+            os.unlink('./' + self.username)
+        except OSError:
+            if os.path.exists('./' + self.username):
+                raise
+            
+        try:
+            frontend = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            frontend.bind('./' + self.username)
+            frontend.listen(1)
+            log('Succesfully bound to socket %s' % self.username)
+        except SocketError:
+            log('Could not bind to socket %s' % self.username)
+            exit(0)
+
+        flag = True
+        rdr_list = [self.sock, frontend, sys.stdin]
+        wrr_list = [self.sock, frontend]
+
+        
         while flag:
 
             # wait until something is ready
@@ -284,12 +306,36 @@ class Bidder(object):
                    
                     # TODO: handle all cases!
 
+                elif conn == frontend:
+                    
+                    connection, client_address = conn.accept()
+                    log('New connection from {0}'.format(client_address))
+
+                    # nonblocking connection
+                    connection.setblocking(0)
+                    
+                    # add to lists
+                    rdr_list.append(connection)
+                    wrr_list.append(connection)
+
                 elif conn == sys.stdin:
 
                     # NOTE: highly dependent case!
                     
                     data = sys.stdin.readline().strip().split()
                     self.parse_client(data)
+
+                else:
+                    # AF_UNIX socket case!
+                    data = conn.recv(512).decode('ascii')
+
+                    if data:
+                        log('Received from frontend: %s' % data)
+                        self.parse_client(data.split())
+                    else:
+                        log('Removed {0}'.format(conn))
+                        rdr_list.remove(conn)
+                        wrr_list.remove(conn)
 
 
 def parse_address(address_string):
@@ -308,21 +354,17 @@ if __name__ == '__main__':
     # FIXME: fix message concatenation on auctioneer.py
     # FIXME: omission of time.sleep(2) results in buggy behavior
 
-    if len(sys.argv) >= 3:
+    if len(sys.argv) >= 2:
 
         try:
-            server_address = parse_address(sys.argv[3])
+            server_address = parse_address(sys.argv[2])
         except IndexError:
             server_address = ('localhost', 50000)
         finally:
             pass
 
         try:
-            price = int(sys.argv[4])
-        except IndexError:
-            price = 100
-        try:
-            bidr = Bidder(sys.argv[1], int(sys.argv[2]), server_address)
+            bidr = Bidder(sys.argv[1], server_address)
             bidr.run()
         finally:
             pass
