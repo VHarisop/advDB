@@ -42,8 +42,7 @@ if __name__ == '__main__':
     itemfile, server_conf = server_data('config.xml')
 
     # get ports and max connections
-    ports = [int(i[0]) for i in server_conf]
-    conns = [int(i[1]) for i in server_conf]
+    ports, conns = zip(*[(int(i[0]), int(i[1])) for i in server_conf])
 
     # create both auctioneers
     auct1 = multiprocessing.Process(
