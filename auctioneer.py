@@ -11,7 +11,6 @@ from base import Server_Base
 import serializer as serial
 import messages, errors
 
-L = 5
 M = 2
 # L is the timeout in seconds for bidding actions
 # M is the number of price lowering timeouts allowed
@@ -176,7 +175,7 @@ class Auctioneer(Server_Base):
                         self.auctioning = True
                         self.sync(messages.StartAuctionMsg())
                         response_list[connection] = self.start_msg()
-                        signal.alarm(L)
+                        signal.alarm(self.L)
 
                     # if auctioning but still on interest phase,
                     # send 'start_bid' msg

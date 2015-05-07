@@ -8,7 +8,6 @@ import serializer as serial
 import messages, errors
 
 # timeout and alarm constants
-L = 5
 M = 2
 
 # set to True if a RuntimeError was raised
@@ -48,7 +47,7 @@ class Server_Base(object):
         ''' handle L second timeouts for possible price reductions
             and item discards 
         '''
-        global L
+        L = self.L
 
         log("{0} seconds passed, update timeout - {1}".format(L, self.port))
 
@@ -136,13 +135,6 @@ class Server_Base(object):
                     self.pending.append(messages.StopBidMsg(
                                         item_id = self.curr_item_id,
                                         winner = curr_item['holder']))
-
-                except KeyError:
-
-                    log('Item with id %d already deleted' % self.curr_item_id)
-                
-                try:
-
                     if self.items:
 
                         # update item counter
@@ -191,13 +183,18 @@ class Server_Base(object):
         self.max_connections    = max_connections
         self.other_port         = other_port
 
-        # sample items. Initial price is always 0, to be initiated by bidder.
-        self.items = {
-            1: item_new('Small hat from middle ages', 0),
-            2: item_new('Pirate Sword', 0),
-            3: item_new('Cupboard from victorian age', 0),
-            4: item_new('A flyer from 1880s Chicago', 0)
-        }
+        with open(itemfile, 'r') as fd:
+
+            # delay
+            self.L = int(fd.readline().strip())
+
+            mkitem = lambda x: item_new(' '.join(x[1:]), int(x[0]))
+
+            # read items from itemfile
+            self.items = {
+                (i + 1): mkitem(j.strip().split()) 
+                for (i, j) in enumerate(fd)
+            }
 
         self.interest_phase = False
         # current_item_id is the item that bids 
@@ -276,7 +273,7 @@ class Server_Base(object):
     
     def parse_messages(self, data, connection):
 
-        global L 
+        L = self.L
         # response: list of messages clear for delivery
         response = []
 
@@ -355,7 +352,7 @@ class Server_Base(object):
                         log('New holder: {0}'.format(username))
 
                         # renew timeout value
-                        signal.alarm(L)
+                        signal.alarm(self.L)
 
                         # sync with other server on priority
                         self.sync(messages.SyncPriceMsg(
@@ -409,7 +406,7 @@ class Server_Base(object):
                     log('New holder: {0}'.format(self.items[item_id]['holder']))
 
                     # renew timeout for item
-                    signal.alarm(L)
+                    signal.alarm(self.L)
 
                 # other server sent a false message
                 # we need to sync again!
@@ -488,7 +485,7 @@ class Server_Base(object):
 
                 # start the alarm sequence here
                 self.auctioning = True
-                signal.alarm(L)
+                signal.alarm(self.L)
 
             if msg_dec['header'] == 'sync_interest':
 
