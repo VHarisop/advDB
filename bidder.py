@@ -37,13 +37,6 @@ class Bidder(object):
             'description': ''
         }
 
-        # list of items to be auctioned
-        # + index of current item in auction
-        # NOTE: these are received after a successful connect + ack handshake
-        
-        # can i participate in the auction?
-        # this flag is updated after receiving the Items msg.
-
         # NOTE: using the **kwargs notation for initializing messages
         connmsg = messages.ConnectMsg(username=username)
         
@@ -98,7 +91,6 @@ class Bidder(object):
 
         # NOTE: this function is a general-purpose function
         #       that parses input sources like sys.stdin.
-        # FIXME: To be replaced with input from UI
 
         # if empty: skip
         if not data: return
@@ -279,7 +271,7 @@ class Bidder(object):
             exit(0)
 
         flag = True
-        rdr_list = [self.sock, frontend, sys.stdin]
+        rdr_list = [self.sock, frontend, instream]
         wrr_list = [self.sock, frontend]
 
         
@@ -304,10 +296,10 @@ class Bidder(object):
                         log('Disconnected from {0}'.format(conn))
                         rdr_list.remove(conn)
                    
-                    # TODO: handle all cases!
 
                 elif conn == frontend:
                     
+                    # connection in local UNIX socket attempted                    
                     connection, client_address = conn.accept()
                     log('New connection from {0}'.format(client_address))
 
@@ -319,9 +311,8 @@ class Bidder(object):
                     wrr_list.append(connection)
 
                 elif conn == sys.stdin:
-
-                    # NOTE: highly dependent case!
                     
+                    # get user input from stdin
                     data = sys.stdin.readline().strip().split()
                     self.parse_client(data)
 
@@ -349,13 +340,10 @@ def parse_address(address_string):
 
 if __name__ == '__main__':
 
+    # default server address
     server_address = ('localhost', 50000)
 
-    # FIXME: fix message concatenation on auctioneer.py
-    # FIXME: omission of time.sleep(2) results in buggy behavior
-
     if len(sys.argv) >= 2:
-
         try:
             server_address = parse_address(sys.argv[2])
         except IndexError:
@@ -369,5 +357,5 @@ if __name__ == '__main__':
         finally:
             pass
     else:
-        log('Usage: ./bidder.py username id')
+        log('Usage: ./bidder.py username [host:port]')
 
