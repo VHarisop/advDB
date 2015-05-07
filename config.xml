@@ -2,12 +2,11 @@
 <data>
 	<server port="50000" clients="25" />
 	<server port="50005" clients="20" />
-		<!-- Bidder parameters such as frequency, interest percentage
-			 or any other options go here -->
+	<!-- Bidder parameters such as frequency, interest percentage
+		 or any other options go here -->
 
-		<!-- bidding frequency, seconds -->
-		<frequency value="4" />
-	</clients>
+	<!-- bidding frequency, seconds -->
+	<frequency value="4" />
 
 	<!-- file with item descriptions -->
 	<items file="items.txt" />

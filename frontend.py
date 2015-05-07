@@ -1,4 +1,4 @@
-import curses
+import curses, sys
 from curses.textpad import Textbox, rectangle
 from curses import wrapper
 
@@ -44,7 +44,6 @@ def frontend(stdscr):
         for i in range(prev_message_len):
             stdscr.addch(2, 1 + i, ' ')
         stdscr.addstr(2, 1, message, 28)
-
         prev_message_len = len(message)
 
 
