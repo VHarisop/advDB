@@ -82,14 +82,11 @@ A typical item structure follows:
 }
 ```
 
-All items are created with the initial price of 0, with 0 timeouts and with the
-`holder` field set to None. In
-[`base.py`](https://github.com/VHarisop/advDB/blob/master/base.py), the
-`item_new(about, price)` function is defined, which is handy for creating new
-items with their timeout and holder fields initialized properly. 
+Items are initialized with 0 timeouts and with the
+`holder` field set to None. In [`base.py`](https://github.com/VHarisop/advDB/blob/master/base.py), the `item_new(about, price)` function is defined, which is handy for creating new items with their timeout and holder fields initialized properly. 
 
 The server assigns items ids sequentially, i.e. a new item in the queue
-received the next highest integer higher than the maximum current item id. This
+receives the next highest integer higher than the maximum current item id. This
 is to work-around the issue of randomized next item selection, which would
 impose extra overhead on the servers' synchronization. The item selection would
 then have to be implemented either by communication with an extra server or
@@ -100,7 +97,8 @@ Each server has its own private copies of variables (items, prices, etc.). Each
 server also keeps track of time separately with its own internal clock. Time
 handling and ticking is done using the `signal.alarm()` interface, by which the
 timer is set to cause an interrupt after `L` seconds. `L` is the specified
-timeout for price reduction / item discarding.
+timeout for price reduction / item discarding, and is retrieved from the item
+info file (defaults to `items.txt`).
 
 ### Time/Price sync
 While it may seem that such a scheme cannot enforce synchronized data, a
@@ -158,9 +156,8 @@ an argument to its constructor.
 In short:
 ```
 from bidder import Bidder
-bidr = Bidder('yourname', your_id, 'localhost:50000')
+bidr = Bidder('yourname', 'localhost:50000')
 bidr.run()
-bidr.complete()
 ```
 
 ### Initializing a client
@@ -170,7 +167,7 @@ port 4040, just do:
 
 ```
 from bidder import Bidder
-bidr = Bidder('johndoe', 1, 'localhost:4040')
+bidr = Bidder('johndoe', 'localhost:4040')
 ```
 
 Most of the work is done in the `__init__` method of the Bidder, which sends a
@@ -189,15 +186,18 @@ as it implements the main loop of the client. It accepts a single parameter,
 If input would be handled by another source, e.g. a GUI class, `instream` could
 be a socket of `socket.AF_UNIX` type. The GUI should run in a separate thread
 and write its input to the ipc socket, which would then be polled by
-`select()`. 
+`select()`. An example of IPC using unix sockets is given using the
+`messenger.py` script. With a bidder client with registered name `johndoe` running:
+
+```
+./messenger.py johndoe bid 100
+```
+
+will attempt to request the bidder client registered as `johndoe` to bid the
+amount of 100 on the current item.
 
 ### Items & status variable
-Each bidder client uses a status variable and a dictionary of items. 
+Each bidder client uses a status variable. 
 
-The status variable contains info for the current item id, the minimum allowed bid and the ability of the bidder to make an offer. 
-The item dictionary contains info about all items currently in the auction
-queue, namely their info, descriptions, current price, etc. It is populated
-after the `ack` message has been received from the server, via a separate
-message of `items` type. 
-
+The status variable contains info for the current item id, the minimum allowed bid and the ability of the bidder to make an offer. It also holds the description for the current item. The current item is updated each time a `start_bid` message is received, and the associated data are cached in the status variable.
 
