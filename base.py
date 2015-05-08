@@ -49,11 +49,7 @@ class Server_Base(object):
         '''
         L = self.L
 
-        log("{0} seconds passed, update timeout - {1}".format(L, self.port))
-
-        # TODO: rest of handler!
-        #       - handle bids
-        #       - discard items
+        # log("{0} seconds passed, update timeout - {1}".format(L, self.port))
 
         # get item that is currently processed
         # server.current_item is just an id that 
@@ -211,14 +207,14 @@ class Server_Base(object):
         try:
             self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         except SocketError:
-            print('Error initalizing socket')
+            log('Error initalizing socket')
             exit(1)
 
         # try initializing other socket
         try:
             self.other = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         except SocketError:
-            print('Error initializing gossip socket')
+            log('Error initializing gossip socket')
             exit(1)
 
     def update_price(self, item_id, new_price, holder):
@@ -336,9 +332,9 @@ class Server_Base(object):
 
                     if offer > self.items[item_id]['price']:
 
-                        # FIXME: new high bid msg should always 
-                        #        come after a successful response
-                        #        from a SyncPriceMsg
+                        # new high bid msg should always 
+                        # come after a successful response
+                        # from a SyncPriceMsg
 
                         # update price and holder fields
                         self.items[item_id]['price'] = offer
