@@ -5,8 +5,32 @@
 	<!-- Bidder parameters such as frequency, interest percentage
 		 or any other options go here -->
 
-	<!-- bidding frequency, seconds -->
-	<frequency value="4" />
+	<!-- list of clients along with info -->
+	<client username="james">
+		<conn freq="4" server="50000" />
+		<bid min="100" max="1000"/>
+	</client>
+
+	<client username="mark">
+		<conn freq="3" server="50000" />
+		<bid min="50" max="500" />
+	</client>
+
+	<client username="ida">
+		<conn freq="9" server="50005" />
+		<bid min="10" max="200" />
+	</client>
+
+	<client username="tony">
+		<conn freq="2" server="50005" />
+		<bid min="20" max="700" />
+	</client>
+
+	<client username="grant">
+		<conn freq="3" server="50000" />
+		<bid min="50" max="850" />
+	</client>
+	<!-- finished client section -->
 
 	<!-- file with item descriptions -->
 	<items file="items.txt" />
