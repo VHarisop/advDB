@@ -4,10 +4,12 @@
 
 import xml.etree.ElementTree as ET
 import multiprocessing
+import sys
 import auctioneer
 
 def worker(port, other_port, items_file, connections):
-    
+
+    sys.stderr = open('auctlog_' + str(port) + ".err", 'w')
     # create an auctioneer with specified parameters
     server = auctioneer.Auctioneer(port = port,
                                    other_port = other_port,
