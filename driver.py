@@ -21,7 +21,7 @@ def worker(port, other_port, items_file, connections):
 def server_data(conf_file):
 
     ''' parses an xml file to find server
-        attributes, such as ports, number
+        attributes, such as ports, max no.
         of clients, item file etc. 
     '''
 
@@ -37,9 +37,35 @@ def server_data(conf_file):
 
     return (item_fd, servers)
 
+def client_data(conf_file):
+
+    ''' parses an xml file to retrieve parameters
+        for the clients, e.g. bidding frequency etc. '''
+
+    root = ET.parse(conf_file).getroot()
+    
+    client_data = lambda conn, bid: { 
+          'port': conn.attrib['server'],
+          'freq': conn.attrib['freq'],
+          'min': int(bid.attrib['min']),
+          'max': int(bid.attrib['max']) 
+        }
+
+    # get attributes for all clients in the xml file
+    clients = [ 
+        {
+         'username': clnt.attrib['username'],
+         'conf': client_data(*clnt.getchildren())
+        } 
+    for clnt in root.iter('client')]
+
+    return clients
+
 if __name__ == '__main__':
 
+    # retrieve server and client parameters
     itemfile, server_conf = server_data('config.xml')
+    clients = client_data('config.xml')
 
     # get ports and max connections
     ports, conns = zip(*[(int(i[0]), int(i[1])) for i in server_conf])
@@ -59,3 +85,6 @@ if __name__ == '__main__':
     # start serving
     auct1.start()
     auct2.start()
+
+    # TODO: create the client processes and their 
+    #       messenger counterparts
