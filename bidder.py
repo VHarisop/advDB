@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 # imports here
+import os
 import time, json, socket, signal, select
 from socket import error as SocketError
 import sys
@@ -252,8 +253,6 @@ class Bidder(object):
 
     def run(self, instream=sys.stdin):
 
-        import os
-
         # remove previous instances of socket
         try:
             os.unlink('./' + self.username)
@@ -271,7 +270,7 @@ class Bidder(object):
             exit(0)
 
         flag = True
-        rdr_list = [self.sock, frontend, instream]
+        rdr_list = [self.sock, frontend]
         wrr_list = [self.sock, frontend]
 
         # boolean that indicates I have received a message from server
@@ -315,13 +314,14 @@ class Bidder(object):
                     # add to lists
                     rdr_list.append(usock_connection)
                     wrr_list.append(usock_connection)
-
-                elif conn == sys.stdin:
-                    
-                    # get user input from stdin
-                    data = sys.stdin.readline().strip().split()
-                    self.parse_client(data)
-
+                
+                
+                #elif conn == sys.stdin:
+                #    
+                #    # get user input from stdin
+                #    data = sys.stdin.readline().strip().split()
+                #    self.parse_client(data)
+                
                 else:
                     # AF_UNIX socket case!
                     data = conn.recv(512).decode('ascii')

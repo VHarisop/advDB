@@ -4,8 +4,33 @@
 
 import xml.etree.ElementTree as ET
 import multiprocessing
-import sys
-import auctioneer
+import sys, time
+import auctioneer, bidder, messenger
+    
+def client_worker(port, username):
+
+    # create a bidder at specified port
+    clnt = bidder.Bidder(username = username,
+                         server_address = ('localhost', port))
+
+    clnt.run()
+
+    return
+
+def messenger_worker(username, frequency, min_bid, max_bid, offers):
+
+    # create a messenger script to communicate 
+    # with its corresponding client
+    msgr = messenger.Messenger(username,
+                               frequency,
+                               min_bid,
+                               max_bid,
+                               offers)
+
+    msgr.simulate()
+
+    return
+
 
 def worker(port, other_port, items_file, connections):
 
@@ -19,6 +44,9 @@ def worker(port, other_port, items_file, connections):
     server.serve()
 
     return
+
+
+
 
 def server_data(conf_file):
 
@@ -46,9 +74,9 @@ def client_data(conf_file):
 
     root = ET.parse(conf_file).getroot()
     
-    client_data = lambda conn, bid: { 
+    client_data = lambda conn, bid, offers: { 
           'port': conn.attrib['server'],
-          'freq': conn.attrib['freq'],
+          'freq': int(conn.attrib['freq']),
           'min': int(bid.attrib['min']),
           'max': int(bid.attrib['max']) 
         }
@@ -57,7 +85,9 @@ def client_data(conf_file):
     clients = [ 
         {
          'username': clnt.attrib['username'],
-         'conf': client_data(*clnt.getchildren())
+         'conf': client_data(*clnt.getchildren()),
+         'offers': [int(i) for i in \
+                    clnt.find('offers').text.strip().split()]
         } 
     for clnt in root.iter('client')]
 
@@ -88,5 +118,32 @@ if __name__ == '__main__':
     auct1.start()
     auct2.start()
 
+    # wait for auctioneers to start
+    print("Starting servers...")
+    time.sleep(3)
+    
+
     # TODO: create the client processes and their 
     #       messenger counterparts
+    
+    for clnt in clients:
+
+        # create all of the bidder clients
+        clnt_proc = multiprocessing.Process(
+                target = client_worker,
+                args = (int(clnt['conf']['port']), clnt['username'],)
+        )
+
+        clnt_proc.start()
+       
+        msgr = multiprocessing.Process(
+                target = messenger_worker,
+                args = (clnt['username'],
+                        clnt['conf']['freq'],
+                        clnt['conf']['min'],
+                        clnt['conf']['max'],
+                        clnt['offers'],)
+        )
+
+        msgr.start()
+
