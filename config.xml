@@ -8,27 +8,64 @@
 	<!-- list of clients along with info -->
 	<client username="james">
 		<conn freq="4" server="50000" />
-		<bid min="100" max="1000"/>
+        <bid min="100" max="1000"/>
+        <offers>
+            100
+            190
+            270
+            440
+            880
+            1000
+        </offers>
 	</client>
 
 	<client username="mark">
-		<conn freq="3" server="50000" />
-		<bid min="50" max="500" />
+		<conn freq="6" server="50000" />
+        <bid min="50" max="500" />
+        <offers>
+            60
+            90
+            180
+            310
+            500
+        </offers>
 	</client>
 
 	<client username="ida">
-		<conn freq="9" server="50005" />
-		<bid min="10" max="200" />
+		<conn freq="5" server="50005" />
+        <bid min="10" max="200" />
+        <offers>
+            20
+            30
+            120
+            200
+        </offers>
 	</client>
 
 	<client username="tony">
-		<conn freq="2" server="50005" />
-		<bid min="20" max="700" />
+		<conn freq="9" server="50005" />
+        <bid min="20" max="700" />
+        <offers>
+            50
+            180
+            225
+            325
+            675
+            690
+        </offers>
 	</client>
 
 	<client username="grant">
-		<conn freq="3" server="50000" />
-		<bid min="50" max="850" />
+		<conn freq="6" server="50000" />
+        <bid min="50" max="850" />
+        <offers>
+            100
+            200
+            400
+            650
+            800
+            850
+        </offers>
 	</client>
 	<!-- finished client section -->
 
