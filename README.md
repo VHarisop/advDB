@@ -46,13 +46,13 @@ Note that a `|` (pipe) character is appended to the JSON string to be used as a
 delimiter.
 
 ### Message encoding/decoding
-After serializing a message in JSON, encoding follows using the UTF-8 format.
+After serializing a message in JSON, encoding follows using the ascii format.
 This is achieved using the `bytes()` built-in function in Python 3.
 Message encoding is done prior to sending, using the `Message.send()` method. 
 
 Decoding is implemented in 2 stages (in `serialized.py`):
 - Unpacking: decoding the raw bytes received over the socket connection to
-  a UTF-8 formatted string
+  an ascii formatted string
 - Decoding: splitting a string of possibly more than 1 unpacked messages based
   on the `|` delimiter and using the `json.loads()` method on each of the
   resulting messages to obtain a `dict`-based representation.

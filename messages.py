@@ -26,10 +26,10 @@ class Message(object):
 
     def send(self):
 
-        ''' Serializes JSON encoded data using UTF-8 encoding
+        ''' Serializes JSON encoded data using ascii encoding
             in order for them to be sent via a TCP/IP connection.
         '''
-        return bytes(self.msg_data, 'UTF-8')
+        return bytes(self.msg_data, 'ascii')
 
     def details(self):
 

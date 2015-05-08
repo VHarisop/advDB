@@ -48,9 +48,9 @@ def unpack_status(status_in_bytes):
 def unpack_msg(msg_in_bytes):
 
     ''' unpack_msg unpacks a byte-encoded message received
-        over a socket using the UTF-8 encoding.
+        over a socket using ASCII encoding.
     '''
-    return msg_in_bytes.decode('UTF-8')
+    return msg_in_bytes.decode('ascii')
 
 def decode_msg(msg_in_json):
 
