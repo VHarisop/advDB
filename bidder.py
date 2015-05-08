@@ -7,7 +7,7 @@ import sys
 
 # import my modules
 import messages, errors
-from serializer import unpack_msg, decode_msg
+from serializer import unpack_msg, decode_msg, encode_status
 
 def log(msg):
    
@@ -274,7 +274,12 @@ class Bidder(object):
         rdr_list = [self.sock, frontend, instream]
         wrr_list = [self.sock, frontend]
 
-        
+        # boolean that indicates I have received a message from server
+        msg_received = False
+
+        # my unix socket connection
+        usock_connection = None
+
         while flag:
 
             # wait until something is ready
@@ -292,6 +297,7 @@ class Bidder(object):
                     # parse data if available
                     if data:
                         self.parse_messages(data, conn)
+                        msg_received = True
                     else:
                         log('Disconnected from {0}'.format(conn))
                         rdr_list.remove(conn)
@@ -300,15 +306,15 @@ class Bidder(object):
                 elif conn == frontend:
                     
                     # connection in local UNIX socket attempted                    
-                    connection, client_address = conn.accept()
+                    usock_connection, client_address = conn.accept()
                     log('New connection from {0}'.format(client_address))
 
                     # nonblocking connection
-                    connection.setblocking(0)
+                    usock_connection.setblocking(0)
                     
                     # add to lists
-                    rdr_list.append(connection)
-                    wrr_list.append(connection)
+                    rdr_list.append(usock_connection)
+                    wrr_list.append(usock_connection)
 
                 elif conn == sys.stdin:
                     
@@ -327,6 +333,14 @@ class Bidder(object):
                         log('Removed {0}'.format(conn))
                         rdr_list.remove(conn)
                         wrr_list.remove(conn)
+
+            # If i received something from server I must
+            # echo my status to the frontend
+            if msg_received and usock_connection in wx:
+                usock_connection.sendall(encode_status(self.status))
+
+                # reset msg flag
+                msg_received = False
 
 
 def parse_address(address_string):

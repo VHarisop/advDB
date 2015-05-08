@@ -1,7 +1,8 @@
 #!/usr/bin/python
 
-import sys, socket
+import sys, socket, select
 from socket import error as SocketError
+from serializer import unpack_status
 
 if __name__ == '__main__':
 
@@ -25,4 +26,21 @@ if __name__ == '__main__':
         exit(0)
 
     client_socket.sendall(msg)
+
+    while True:
+
+        # main loop
+        # TODO: given a client bidding frequency and bid limits,
+        #       make bids to the client without violating constraints
+
+        rx, _, _ = select.select([client_socket], [], [])
+
+        if client_socket in rx:
+
+            sock_data = client_socket.recv(512)
+            if sock_data:
+                log = unpack_status(sock_data)
+                print(log)
+            else:
+                exit(0)
 
