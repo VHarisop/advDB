@@ -1,3 +1,6 @@
+#!/usr/bin/python2
+# -*- coding: utf-8 -*-
+
 import curses, sys
 from curses.textpad import Textbox, rectangle
 from curses import wrapper
