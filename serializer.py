@@ -26,6 +26,24 @@ def encode_msg(msg_type, msg_details):
     # '|' is the message delimiter
     return (json.dumps(data) + '|')
 
+def encode_status(bidder_status):
+
+    ''' encodes a bidder status variable in json
+        in order for it to be sent over a socket
+        communication channel. Also serializes in
+        ASCII format.
+    '''
+
+    # add the message delimiter
+    return bytes((json.dumps(bidder_status) + '|'), 'ascii')
+
+def unpack_status(status_in_bytes):
+
+    ''' unpacks and deserializes a status received
+        in JSON + ASCII format over a unix socket
+        channel '''
+
+    return json.loads(status_in_bytes.decode('ascii').split('|')[0])
 
 def unpack_msg(msg_in_bytes):
 
