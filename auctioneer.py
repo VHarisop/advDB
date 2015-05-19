@@ -82,6 +82,9 @@ class Auctioneer(Server_Base):
 
     def bootstrap(self):
 
+        ''' socket-related initialization work before entering 
+            main server loop '''
+
         # try to bind to socket, exit if failure
         try:
             self.server.bind((self.host, self.port))
@@ -130,6 +133,8 @@ class Auctioneer(Server_Base):
 
 
     def serve(self):
+
+        ''' main server loop '''
 
         BUFF_SIZE = 2048
     

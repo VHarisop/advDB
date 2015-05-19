@@ -144,6 +144,8 @@ class Server_Base(object):
                        other_port = 50005,  
                        itemfile="items.txt"):
 
+        ''' Initialized an Auctioneer with the parameters given '''
+
         # register signal handlers 
         signal.signal(signal.SIGALRM, self.sigalrm_handler)
         signal.signal(signal.SIGINT, self.sigint_handler)
@@ -245,6 +247,9 @@ class Server_Base(object):
 
     
     def parse_messages(self, data, connection):
+
+        ''' parses received messages from a connection
+            and returns a list of appropriate responses '''
 
         L = self.L
         # response: list of messages clear for delivery
