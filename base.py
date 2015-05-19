@@ -72,37 +72,24 @@ class Server_Base(object):
             
             return
 
+        if not self.accepting:
+            
+            # do nothing, renew alarm
+
+            signal.alarm(L)
+            return 
+
         if curr_item['interested'] == []:
             # no price has been offered, nobody interested
-
-            # discard item, inform debug log
-            del self.items[self.curr_item_id]
-            log('Deleted item {0}'.format(self.curr_item_id)) 
             
             # send a StopBidMsg to the other server
             # to notify about the discarding
             self.sync(messages.StopBidMsg(item_id=self.curr_item_id,
-                                          winner=curr_item['holder'])
+                                          winner=curr_item['holder'],
+                                          price=curr_item['price'])
             )
 
-            # also notify my clients
-            self.pending.append(messages.StopBidMsg(
-                                    item_id=self.curr_item_id,
-                                    winner=curr_item['holder']))
-
-            # if no items remain, do not renew alarm
-            # and inform my clients about completion of auction
-            if not self.items:
-                signal.alarm(0)
-                self.pending.append(messages.CompleteMsg())
-                return
-
-            # item_id is updated (linear assignment of ids)
-            self.curr_item_id = min(self.items)
-
-            # notify my clients for bidding on new item
-            self.pending.append(self.start_msg())
-            self.interest_phase = True
+            self.accepting = False
 
         else:
             
@@ -124,26 +111,13 @@ class Server_Base(object):
 
             if curr_item['timeouts'] > M:        
 
-                try:
-                    del self.items[self.curr_item_id]
-                    log('Deleted item {0}'.format(curr_item))
-                    
-                    self.pending.append(messages.StopBidMsg(
-                                        item_id = self.curr_item_id,
-                                        winner = curr_item['holder']))
-                    if self.items:
+                # inform other server 
+                self.sync(messages.StopBidMsg(
+                                item_id = self.curr_item_id,
+                                winner = curr_item['holder'],
+                                price = curr_item['price']))
 
-                        # update item counter
-                        self.curr_item_id = min(self.items)
-
-                        # send a start bid message for the next item
-                        self.pending.append(self.start_msg())
-                        self.interest_phase = True
-
-                except KeyError:
-                    log('No item found with id {0}'.format(
-                                        self.curr_item_id))
-                
+                self.accepting = False 
 
 
         # renew alarm
@@ -202,6 +176,9 @@ class Server_Base(object):
 
         # list of pending messages
         self.pending = []
+
+        # am i accepting?
+        self.accepting = False
 
         # try initializing the socket
         try:
@@ -320,6 +297,16 @@ class Server_Base(object):
 
                 if item_id in self.items:
 
+
+                    if not self.accepting:
+                        
+                        # notify client we are not accepting bids
+                        response.append(messages.ErrorMsg(
+                                username=username,
+                                error=errors.not_accepting))
+
+                        continue
+
                     if self.interest_phase:
 
                         # we are still in the interest phase
@@ -418,11 +405,19 @@ class Server_Base(object):
 
             if msg_dec['header'] == 'stop_bid':
 
+                winprice = self.items[self.curr_item_id]['price']
+                winholder = self.items[self.curr_item_id]['holder']
+
+                if msg_dec['price'] > winprice:
+                    winholder = msg_dec['winner']
+                    winprice = msg_dec['price']
+
                 # add a stop bid message to pending messages
                 # in order to be delivered to all my clients
                 stopmsg = messages.StopBidMsg(
                                     item_id = msg_dec['item_id'],
-                                    winner = msg_dec['winner']
+                                    winner = winholder,
+                                    price = winprice
                 )       
                 
                 
@@ -445,6 +440,7 @@ class Server_Base(object):
                         try:
                             self.curr_item_id = min(self.items)
                             self.pending.append(self.start_msg())
+                            self.accepting = True
                             self.interest_phase = True
                         except KeyError:
                             pass
@@ -457,7 +453,7 @@ class Server_Base(object):
                 
             if msg_dec['header'] == 'i_am_interested':
 
-                if self.items[self.curr_item_id]['timeouts'] == 0:
+                if self.interest_phase:
 
                     # add user to interested people
                     self.items[self.curr_item_id]['interested'].append(
@@ -481,6 +477,7 @@ class Server_Base(object):
 
                 # start the alarm sequence here
                 self.auctioning = True
+                self.accepting = True
                 signal.alarm(self.L)
 
             if msg_dec['header'] == 'sync_interest':

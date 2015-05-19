@@ -244,14 +244,16 @@ class Bidder(object):
 
                     exit(1) # NOTE: fatal error!
 
+                if msg['error'] == errors.not_accepting:
+                    log('Currently not accepting bids')
+
                 if msg['error'] == errors.interest_phase:
                     log('We are not yet in the bidding phase! Please wait')
-
 
         # print(self.status)
         return response
 
-    def run(self, instream=sys.stdin):
+    def run(self):
 
         # remove previous instances of socket
         try:
@@ -301,7 +303,6 @@ class Bidder(object):
                         log('Disconnected from {0}'.format(conn))
                         rdr_list.remove(conn)
                    
-
                 elif conn == frontend:
                     
                     # connection in local UNIX socket attempted                    
@@ -314,14 +315,7 @@ class Bidder(object):
                     # add to lists
                     rdr_list.append(usock_connection)
                     wrr_list.append(usock_connection)
-                
-                
-                #elif conn == sys.stdin:
-                #    
-                #    # get user input from stdin
-                #    data = sys.stdin.readline().strip().split()
-                #    self.parse_client(data)
-                
+
                 else:
                     # AF_UNIX socket case!
                     data = conn.recv(512).decode('ascii')
@@ -341,7 +335,6 @@ class Bidder(object):
 
                 # reset msg flag
                 msg_received = False
-
 
 def parse_address(address_string):
 

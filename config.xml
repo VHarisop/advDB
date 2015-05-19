@@ -67,6 +67,19 @@
             850
         </offers>
 	</client>
+
+	<client username="john locke">
+		<conn freq="2" server="50000" />
+        <bid min="100" max="1500"/>
+        <offers>
+            150
+            240
+            330
+            490
+            830
+            1050
+        </offers>
+	</client>
 	<!-- finished client section -->
 
 	<!-- file with item descriptions -->

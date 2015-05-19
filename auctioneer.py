@@ -172,8 +172,9 @@ class Auctioneer(Server_Base):
                     # if this was first connection, start alarm() sequence
                     if not self.auctioning:
                         print('{0} - Started'.format(self.port))
-                        self.auctioning = True
                         self.sync(messages.StartAuctionMsg())
+                        self.accepting = True
+                        self.auctioning = True                
                         response_list[connection] = self.start_msg()
                         signal.alarm(self.L)
 
@@ -204,7 +205,6 @@ class Auctioneer(Server_Base):
 
                         read_conns.remove(elem)
                         write_conns.remove(elem)
-                        self.registrar_table
 
             for elem in wx: 
        
